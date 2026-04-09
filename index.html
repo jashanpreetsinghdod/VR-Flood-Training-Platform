@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Vexicap | Level Transition</title>
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.2.0/dist/aframe-extras.min.js"></script>
+  </head>
+  <body style="background-color: black;">
+    <a-scene>
+      
+      <a-assets>
+        <a-asset-item id="house-model" src="assets/my_bedroom.glb"></a-asset-item>
+        <a-asset-item id="basement-model" src="assets/basement.glb"></a-asset-item>
+
+        <a-asset-item id="phone-asset" src="assets/phone.glb"></a-asset-item>
+        <a-asset-item id="torch-asset" src="assets/flashlight.glb"></a-asset-item>
+        <a-asset-item id="firstaid-asset" src="assets/aid.glb"></a-asset-item>
+        <a-asset-item id="switch-asset" src="assets/switch.glb"></a-asset-item>
+
+        <audio id="footsteps-audio" src="assets/footsteps.mp3" loop crossorigin="anonymous"></audio>
+        <video id="scene2-video" src="assets/scene2.mp4" crossorigin="anonymous" playsinline webkit-playsinline></video>
+      </a-assets>
+
+      <a-entity id="rig" movement-controls="fly: true; speed: 0.25" position="10 9.6 -17">
+        <a-entity camera position="0 0 0" look-controls>
+          <a-cursor fuse="true" fuseTimeout="1500" color="yellow" raycaster="objects: .clickable"
+                    animation__fusing="property: scale; from: 1 1 1; to: 0.1 0.1 0.1; dur: 1500; startEvents: fusing"
+                    animation__mouseleave="property: scale; to: 1 1 1; dur: 100; startEvents: mouseleave">
+          </a-cursor>
+          <a-plane id="fade-screen" color="#000000" width="10" height="10" position="0 0 -0.1" material="opacity: 0; transparent: true; depthTest: false"></a-plane>
+          <a-entity id="emergency-alert" position="0 0 -1" scale="0.4 0.4 0.4" visible="false">
+            <a-plane width="3.5" height="1.2" color="#4a0000" opacity="0.85" position="0 0 -0.01"></a-plane>
+            <a-text value="WARNING: FLASH FLOOD" color="#FF3333" align="center" position="0 0.2 0" width="4" font="mozillavr"></a-text>
+            <a-text value="Collect necessary survival items!" color="#FFFFFF" align="center" position="0 -0.15 0" width="3"></a-text>
+          </a-entity>
+
+
+          <a-entity id="checklist-ui" position="0.8 0.5 -1" scale="0.4 0.4 0.4" visible="false">
+            <a-plane width="2.2" height="1.8" color="#1a1a1a" opacity="0.85" position="0 0 -0.01"></a-plane>
+            
+            <a-text value="EMERGENCY TASKS" color="#FFCC00" align="center" position="0 0.65 0" width="3.5" font="mozillavr"></a-text>
+            <a-plane width="1.8" height="0.02" color="#FFCC00" position="0 0.45 0" opacity="0.8"></a-plane>
+            
+            <a-text id="ui-phone" value="[ ] Find Phone" position="-0.8 0.15 0" width="3" color="#CCCCCC"></a-text>
+            <a-text id="ui-torch" value="[ ] Find Torch" position="-0.8 -0.15 0" width="3" color="#CCCCCC"></a-text>
+            <a-text id="ui-firstaid" value="[ ] First Aid Kit" position="-0.8 -0.45 0" width="3" color="#CCCCCC"></a-text>
+          </a-entity>
+
+
+          <a-entity id="success-message" position="0 0 -1" scale="0.4 0.4 0.4" visible="false">
+            <a-plane width="4" height="1.2" color="#003300" opacity="0.85" position="0 0 -0.01"></a-plane>
+            <a-text value="ALL ITEMS COLLECTED!" color="#00FF00" align="center" position="0 0.2 0" width="4" font="mozillavr"></a-text>
+            <a-text value="Find the basement door immediately." color="#FFFFFF" align="center" position="0 -0.15 0" width="3"></a-text>
+          </a-entity>
+
+          <a-entity id="basement-objective" position="0 -0.5 -1" scale="0.35 0.35 0.35" visible="false">
+            <a-plane width="3.8" height="1.2" color="#1a1a1a" opacity="0.85" position="0 0 -0.01"></a-plane>
+            <a-text id="objective-title" value="NEW OBJECTIVE" color="#FFCC00" align="center" position="0 0.2 0" width="4" font="mozillavr"></a-text>
+            <a-text id="objective-text" value="Find the Main Switch and cut the power!" color="#FFFFFF" align="center" position="0 -0.15 0" width="3"></a-text>
+          </a-entity>
+        </a-entity>
+      </a-entity>
+
+      <a-entity id="bedroom-scene" visible="true">
+        <a-gltf-model src="#house-model" position="0 0 0"></a-gltf-model>
+        <a-plane rotation="-90 0 0" width="100" height="100" color="#333" opacity="0.5"></a-plane>
+
+        <a-box id="tv-trigger" class="clickable" 
+       position="14.687 9.235 -1.813" 
+       rotation="-11.596 -78.103 -1.114" 
+       scale="4.709 2.706 0.043" 
+       color="#FF0033" opacity="0.6">
+    <a-text value="WATCH NEWS" align="center" position="0 0 0.1" scale="1 1 1" color="white"></a-text>
+</a-box>
+
+<a-video id="tv-screen" src="#scene2-video" 
+         position="14.687 9.235 -1.813" 
+         rotation="-6.139 -81.591 -0.284" 
+         width="6" height="3" 
+         scale="0.831 0.939 0.176" 
+         visible="false">
+</a-video>
+
+        <a-entity id="item-spawner" visible="true">
+          <a-gltf-model id="item-phone" src="#phone-asset" position="13.458 6.768 -7.852" rotation="-90 0 -90" scale="0.28 0.28 0.28"></a-gltf-model>
+          <a-gltf-model id="item-torch" src="#torch-asset" position="16.600 8.845 -14.514" rotation="0 -68.016 0" scale="12 12 12"></a-gltf-model>
+          <a-gltf-model id="item-firstaid" src="#firstaid-asset" position="-8.817 13.768 -14.858" rotation="-51.9 -92.983 1.203" scale="0.4 0.4 0.4"></a-gltf-model>
+        </a-entity>
+
+        <a-box id="basement-door" position="3.379 9.947 21.976" rotation="0 -180 0" scale="7.833 5.576 4.793" width="1.5" height="3" depth="0.1" color="#8B4513" opacity="0.2" visible="false">
+          <a-text value="STARE TO ENTER\nBASEMENT" align="center" position="0 0 0.1" color="white"></a-text>
+        </a-box>
+      </a-entity>
+
+      <a-entity id="basement-scene" visible="false">
+        <a-gltf-model src="#basement-model" position="-10.6 -4.1 47"></a-gltf-model>
+        
+        <a-gltf-model id="power-switch" src="#switch-asset" class="clickable" position="-0.726 1.816 52.977" rotation="0 -90 0" scale="0.005 0.005 0.005">
+          <a-text value="MAIN POWER\nSTARE TO PULL" align="center" position="0 0.5 0" color="white" scale="0.5 0.5 0.5"></a-text>
+        </a-gltf-model>
+      </a-entity>
+
+    </a-scene>
+
+    <script>
+      // using namespace std;
+      
+      const tvTrigger = document.querySelector('#tv-trigger');
+      const tvScreen = document.querySelector('#tv-screen');
+      const scene2Video = document.querySelector('#scene2-video');
+      const emergencyAlert = document.querySelector('#emergency-alert');
+      
+      const itemSpawner = document.querySelector('#item-spawner');
+      const checklistUI = document.querySelector('#checklist-ui');
+      const successMessage = document.querySelector('#success-message');
+
+      const phone = document.querySelector('#item-phone');
+      const torch = document.querySelector('#item-torch');
+      const firstaid = document.querySelector('#item-firstaid');
+
+      const uiPhone = document.querySelector('#ui-phone');
+      const uiTorch = document.querySelector('#ui-torch');
+      const uiFirstaid = document.querySelector('#ui-firstaid');
+
+      // NEW: Level Transition Elements
+      const bedroomScene = document.querySelector('#bedroom-scene');
+      const basementDoor = document.querySelector('#basement-door');
+      const basementScene = document.querySelector('#basement-scene');
+      const rig = document.querySelector('#rig');
+      const powerSwitch = document.querySelector('#power-switch');
+      const basementObjective = document.querySelector('#basement-objective');
+
+      let inventory = { phone: false, torch: false, firstaid: false };
+
+      // --- PHASE 1: THE VIDEO ---
+      tvTrigger.addEventListener('click', () => {
+        tvTrigger.setAttribute('visible', 'false');
+        tvTrigger.classList.remove('clickable'); 
+        tvScreen.setAttribute('visible', 'true');
+        scene2Video.play();
+      });
+
+      // --- PHASE 2: THE ALERT & SPAWN ---
+      scene2Video.addEventListener('ended', () => {
+        tvScreen.setAttribute('visible', 'false');
+        emergencyAlert.setAttribute('visible', 'true');
+        
+        setTimeout(() => {
+            emergencyAlert.setAttribute('visible', 'false');
+            checklistUI.setAttribute('visible', 'true');
+            itemSpawner.setAttribute('visible', 'true');
+            
+            phone.classList.add('clickable');
+            torch.classList.add('clickable');
+            firstaid.classList.add('clickable');
+        }, 4000);
+      });
+
+      // --- PHASE 3: COLLECTION LOGIC ---
+      // --- PHASE 3: COLLECTION LOGIC ---
+      function updateChecklist() {
+        // Change text to [X] and color to Green when collected
+        if (inventory.phone) {
+            uiPhone.setAttribute('value', '[X] Phone Collected');
+            uiPhone.setAttribute('color', '#00FF00');
+        }
+        if (inventory.torch) {
+            uiTorch.setAttribute('value', '[X] Torch Collected');
+            uiTorch.setAttribute('color', '#00FF00');
+        }
+        if (inventory.firstaid) {
+            uiFirstaid.setAttribute('value', '[X] First Aid Kit');
+            uiFirstaid.setAttribute('color', '#00FF00');
+        }
+
+        // WIN CONDITION MET
+        if (inventory.phone && inventory.torch && inventory.firstaid) {
+          checklistUI.setAttribute('visible', 'false');
+          successMessage.setAttribute('visible', 'true');
+          
+          // Show the door to the basement
+          basementDoor.setAttribute('visible', 'true');
+          basementDoor.classList.add('clickable');
+          
+          setTimeout(() => {
+              successMessage.setAttribute('visible', 'false');
+          }, 4000);
+        }
+      }
+
+      phone.addEventListener('click', () => {
+        inventory.phone = true;
+        phone.setAttribute('visible', 'false');
+        phone.classList.remove('clickable');
+        updateChecklist();
+      });
+
+      torch.addEventListener('click', () => {
+        inventory.torch = true;
+        torch.setAttribute('visible', 'false');
+        torch.classList.remove('clickable');
+        updateChecklist();
+      });
+
+      firstaid.addEventListener('click', () => {
+        inventory.firstaid = true;
+        firstaid.setAttribute('visible', 'false');
+        firstaid.classList.remove('clickable');
+        updateChecklist();
+      });
+
+      // --- PHASE 4: LEVEL TRANSITION ---
+      const fadeScreen = document.querySelector('#fade-screen'); // Grab the black screen
+
+      basementDoor.addEventListener('click', () => {
+        console.log("Initiating Level Transition Fade...");
+        
+        // 1. Fade the screen to BLACK (Takes 1000ms / 1 second)
+        fadeScreen.setAttribute('animation', 'property: material.opacity; from: 0; to: 1; dur: 1000; easing: linear');
+        
+        // 2. Use setTimeout to wait exactly 1 second while the screen is black
+        setTimeout(() => {
+            // -- Do all the teleporting while the player can't see! --
+            
+            // Hide Bedroom, Show Basement
+            bedroomScene.setAttribute('visible', 'false');
+            basementScene.setAttribute('visible', 'true');
+            
+            // Teleport the player
+            rig.setAttribute('position', '-17.957 8.060 34.629');
+            rig.setAttribute('rotation', '0 0 0'); 
+
+            inBasement = true;
+            
+            // Make the switch clickable & update HUD
+            powerSwitch.classList.add('clickable');
+            basementObjective.setAttribute('visible', 'true');
+            
+            // 3. Fade the screen back to CLEAR (Takes 1 second)
+            fadeScreen.setAttribute('animation', 'property: material.opacity; from: 1; to: 0; dur: 1000; easing: linear');
+            
+        }, 1000); // Wait 1000ms before running this block
+      });
+
+      // --- PHASE 5: THE SWITCH LOGIC ---
+      powerSwitch.addEventListener('click', () => {
+        console.log("Power disconnected! Playing animation...");
+        
+        // 1. Play the animation baked inside the .glb file
+        // clip: * (Plays all animations)
+        // loop: once (Prevents it from pulling up and down forever)
+        // clampWhenFinished: true (Leaves the lever stuck in the 'down' position when done)
+        powerSwitch.setAttribute('animation-mixer', 'clip: *; loop: once; clampWhenFinished: true');
+        
+        // 2. Stop the user from clicking it again
+        powerSwitch.classList.remove('clickable');
+        
+        // 3. Update objective text
+        basementObjective.setAttribute('value', 'POWER DISCONNECTED.\nSafe from electrocution.');
+        basementObjective.setAttribute('color', '#00FF00');
+      });
+      // ==========================================
+      // --- PHASE 6: FOOTSTEP AUDIO LOGIC ---
+      // ==========================================
+      const footstepsAudio = document.querySelector('#footsteps-audio');
+      
+      // We use a Set to track multiple keys at once (e.g., holding W and D to move diagonally)
+      const activeKeys = new Set();
+      const movementKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+
+      document.addEventListener('keydown', (event) => {
+        const key = event.key.toLowerCase();
+        
+        // If the key pressed is a movement key...
+        if (movementKeys.includes(key)) {
+            activeKeys.add(key);
+            
+            // If this is the FIRST key pressed (starting to move), play the sound
+            if (activeKeys.size === 1) {
+                // Lower the volume slightly so it doesn't drown out the news video
+                footstepsAudio.volume = 0.5; 
+                footstepsAudio.play().catch(err => console.log("Click the screen first to allow audio!", err));
+            }
+        }
+      });
+
+      document.addEventListener('keyup', (event) => {
+        const key = event.key.toLowerCase();
+        
+        // When a key is released, remove it from the active list
+        if (movementKeys.includes(key)) {
+            activeKeys.delete(key);
+            
+            // If NO movement keys are being held down, pause the sound
+            if (activeKeys.size === 0) {
+                footstepsAudio.pause();
+                // Optional: reset audio to the beginning of the step sound
+                // footstepsAudio.currentTime = 0; 
+            }
+        }
+      });
+      // ==========================================
+      // --- PHASE 7: INVISIBLE WALLS (COLLISION) ---
+      // ==========================================
+      let inBasement = false; // Tracks which room we are currently in
+
+      // NOTE: I have guessed these numbers based on your item locations. 
+      // You will need to tweak them to perfectly match your actual walls!
+      const bounds = {
+          bedroom:  { minX: -8.6  , maxX: 15.5, minZ: -21.6, maxZ: 20.780 },
+          basement: { minX: -20.431, maxX: -1.028, minZ: 33.224, maxZ: 67.3 }
+      };
+
+      function enforceWalls() {
+          // Get the actual 3D position of the player
+          let pos = rig.object3D.position; 
+          let currentRoom = inBasement ? bounds.basement : bounds.bedroom;
+
+          // If the player tries to walk past a wall, freeze them at the wall's coordinate
+          if (pos.x < currentRoom.minX) pos.x = currentRoom.minX;
+          if (pos.x > currentRoom.maxX) pos.x = currentRoom.maxX;
+          if (pos.z < currentRoom.minZ) pos.z = currentRoom.minZ;
+          if (pos.z > currentRoom.maxZ) pos.z = currentRoom.maxZ;
+
+          // Run this check every single frame of the game (60 times a second)
+          requestAnimationFrame(enforceWalls); 
+      }
+      
+      enforceWalls(); // Start the collision engine!
+    </script>
+  </body>
+</html>
