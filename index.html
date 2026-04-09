@@ -21,8 +21,8 @@
         <video id="scene2-video" src="assets/scene2.mp4" crossorigin="anonymous" playsinline webkit-playsinline></video>
       </a-assets>
 
-      <a-entity id="rig" movement-controls="fly: true; speed: 0.25" position="10 9.6 -17">
-        <a-entity camera position="0 0 0" look-controls>
+      <a-entity id="rig" movement-controls="fly: false; speed: 0.25" position="10 9.6 -17">
+        <a-entity camera lock-pitch position="0 0 0" look-controls>
           <a-cursor fuse="true" fuseTimeout="1500" color="yellow" raycaster="objects: .clickable"
                     animation__fusing="property: scale; from: 1 1 1; to: 0.1 0.1 0.1; dur: 1500; startEvents: fusing"
                     animation__mouseleave="property: scale; to: 1 1 1; dur: 100; startEvents: mouseleave">
@@ -131,7 +131,13 @@
       const basementObjective = document.querySelector('#basement-objective');
 
       let inventory = { phone: false, torch: false, firstaid: false };
-
+      // NEW: Custom component to stop the right joystick from looking up/down
+      AFRAME.registerComponent('lock-pitch', {
+        tick: function () {
+          // Forces the camera's up/down rotation to stay at exactly 0
+          this.el.components['look-controls'].pitchObject.rotation.x = 0;
+        }
+      });
       // --- PHASE 1: THE VIDEO ---
       tvTrigger.addEventListener('click', () => {
         tvTrigger.setAttribute('visible', 'false');
@@ -260,73 +266,61 @@
         basementObjective.setAttribute('color', '#00FF00');
       });
       // ==========================================
-      // --- PHASE 6: FOOTSTEP AUDIO LOGIC ---
+      // --- PHASE 6 & 7: UNIVERSAL ENGINE (WALLS + FOOTSTEPS) ---
       // ==========================================
       const footstepsAudio = document.querySelector('#footsteps-audio');
       
-      // We use a Set to track multiple keys at once (e.g., holding W and D to move diagonally)
-      const activeKeys = new Set();
-      const movementKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
-
-      document.addEventListener('keydown', (event) => {
-        const key = event.key.toLowerCase();
-        
-        // If the key pressed is a movement key...
-        if (movementKeys.includes(key)) {
-            activeKeys.add(key);
-            
-            // If this is the FIRST key pressed (starting to move), play the sound
-            if (activeKeys.size === 1) {
-                // Lower the volume slightly so it doesn't drown out the news video
-                footstepsAudio.volume = 0.5; 
-                footstepsAudio.play().catch(err => console.log("Click the screen first to allow audio!", err));
-            }
-        }
-      });
-
-      document.addEventListener('keyup', (event) => {
-        const key = event.key.toLowerCase();
-        
-        // When a key is released, remove it from the active list
-        if (movementKeys.includes(key)) {
-            activeKeys.delete(key);
-            
-            // If NO movement keys are being held down, pause the sound
-            if (activeKeys.size === 0) {
-                footstepsAudio.pause();
-                // Optional: reset audio to the beginning of the step sound
-                // footstepsAudio.currentTime = 0; 
-            }
-        }
-      });
-      // ==========================================
-      // --- PHASE 7: INVISIBLE WALLS (COLLISION) ---
-      // ==========================================
       let inBasement = false; // Tracks which room we are currently in
-
-      // NOTE: I have guessed these numbers based on your item locations. 
-      // You will need to tweak them to perfectly match your actual walls!
       const bounds = {
           bedroom:  { minX: -8.6  , maxX: 15.5, minZ: -21.6, maxZ: 20.780 },
           basement: { minX: -20.431, maxX: -1.028, minZ: 33.224, maxZ: 67.3 }
       };
 
-      function enforceWalls() {
-          // Get the actual 3D position of the player
+      // Store the rig's starting position to track movement
+      let lastX = 10; 
+      let lastZ = -17; 
+
+      function gameLoop() {
           let pos = rig.object3D.position; 
           let currentRoom = inBasement ? bounds.basement : bounds.bedroom;
 
-          // If the player tries to walk past a wall, freeze them at the wall's coordinate
+          // 1. INVISIBLE WALLS (Collision)
           if (pos.x < currentRoom.minX) pos.x = currentRoom.minX;
           if (pos.x > currentRoom.maxX) pos.x = currentRoom.maxX;
           if (pos.z < currentRoom.minZ) pos.z = currentRoom.minZ;
           if (pos.z > currentRoom.maxZ) pos.z = currentRoom.maxZ;
 
-          // Run this check every single frame of the game (60 times a second)
-          requestAnimationFrame(enforceWalls); 
+          // 2. UNIVERSAL FOOTSTEPS (Works for WASD, Arrows, AND Xbox Controllers!)
+          // Calculate if the player's position changed since the last frame
+          let movedX = Math.abs(pos.x - lastX);
+          let movedZ = Math.abs(pos.z - lastZ);
+
+          // If the position changed by more than a tiny fraction, they are walking
+          if (movedX > 0.005 || movedZ > 0.005) {
+              if (footstepsAudio.paused) {
+                  footstepsAudio.volume = 0.5;
+                  let playPromise = footstepsAudio.play();
+                  // Catch browser autoplay errors gracefully
+                  if (playPromise !== undefined) {
+                      playPromise.catch(error => { console.log("Waiting for user click..."); });
+                  }
+              }
+          } else {
+              // If position hasn't changed, pause the audio
+              if (!footstepsAudio.paused) {
+                  footstepsAudio.pause();
+              }
+          }
+
+          // Save the current position to compare against in the next frame
+          lastX = pos.x;
+          lastZ = pos.z;
+
+          // Run this engine loop 60 times a second
+          requestAnimationFrame(gameLoop); 
       }
       
-      enforceWalls(); // Start the collision engine!
+      gameLoop(); // Start the engine!
     </script>
   </body>
 </html>
