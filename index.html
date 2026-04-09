@@ -4,6 +4,54 @@
     <title>FloodXR</title>
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.2.0/dist/aframe-extras.min.js"></script>
+    
+    <script>
+      // using namespace std;
+      
+      AFRAME.registerComponent('drone-controller', {
+        schema: { speed: { default: 0.15 } }, 
+        init: function () {
+          this.camera = document.querySelector('[camera]');
+          this.lockedYaw = null; 
+        },
+        tick: function () {
+          var look = this.camera ? this.camera.components['look-controls'] : null;
+
+          // Pitch is NOT locked here, allowing mouse to look up/down freely.
+
+          var gamepads = navigator.getGamepads && navigator.getGamepads();
+          if (!gamepads) return;
+
+          for (var i = 0; i < gamepads.length; i++) {
+            var gamepad = gamepads[i];
+            if (gamepad) {
+              var stickX = gamepad.axes[2]; // Right Stick Left/Right
+              var stickY = gamepad.axes[3]; // Right Stick Up/Down
+
+              // AXIS ISOLATION: 
+              // If you push the stick Up/Down hard, we treat it as an elevator.
+              if (Math.abs(stickY) > 0.4 && Math.abs(stickY) > Math.abs(stickX) * 2) {
+                
+                // 1. Move the Rig Up/Down
+                this.el.object3D.position.y -= stickY * this.data.speed;
+
+                // 2. Lock the Left/Right head turn ONLY while elevating
+                // This prevents the "Arcing" while the mouse stays free otherwise.
+                if (look && look.yawObject) {
+                  if (this.lockedYaw === null) {
+                     this.lockedYaw = look.yawObject.rotation.y; 
+                  }
+                  look.yawObject.rotation.y = this.lockedYaw; 
+                }
+              } else {
+                // Unlock head rotation when stick is released
+                this.lockedYaw = null;
+              }
+            }
+          }
+        }
+      });
+    </script>
   </head>
   <body style="background-color: black;">
     <a-scene>
@@ -21,7 +69,7 @@
         <video id="scene2-video" src="assets/scene2.mp4" crossorigin="anonymous" playsinline webkit-playsinline></video>
       </a-assets>
 
-      <a-entity id="rig" movement-controls="fly: true; speed: 0.25" position="10 9.6 -17">
+      <a-entity id="rig" movement-controls="fly: true; speed: 0.25" drone-controller position="10 9.6 -17">
         <a-entity camera position="0 0 0" look-controls>
           <a-cursor fuse="true" fuseTimeout="1500" color="yellow" raycaster="objects: .clickable"
                     animation__fusing="property: scale; from: 1 1 1; to: 0.1 0.1 0.1; dur: 1500; startEvents: fusing"
@@ -122,7 +170,6 @@
       const uiTorch = document.querySelector('#ui-torch');
       const uiFirstaid = document.querySelector('#ui-firstaid');
 
-      // NEW: Level Transition Elements
       const bedroomScene = document.querySelector('#bedroom-scene');
       const basementDoor = document.querySelector('#basement-door');
       const basementScene = document.querySelector('#basement-scene');
@@ -132,12 +179,22 @@
 
       let inventory = { phone: false, torch: false, firstaid: false };
 
-      // --- PHASE 1: THE VIDEO ---
+      // --- PHASE 1: THE VIDEO (Upgraded for Controller Trust) ---
       tvTrigger.addEventListener('click', () => {
+        console.log("Gaze detected! Attempting to play video...");
+        
         tvTrigger.setAttribute('visible', 'false');
         tvTrigger.classList.remove('clickable'); 
         tvScreen.setAttribute('visible', 'true');
-        scene2Video.play();
+
+        // FORCE PLAY: We mute it for a millisecond to satisfy the browser, then play
+        scene2Video.muted = true; 
+        scene2Video.play().then(() => {
+            // Once it starts, we unmute it so you can hear the news!
+            scene2Video.muted = false;
+        }).catch(err => {
+            console.error("Video blocked by browser. Physical click needed!", err);
+        });
       });
 
       // --- PHASE 2: THE ALERT & SPAWN ---
@@ -157,9 +214,7 @@
       });
 
       // --- PHASE 3: COLLECTION LOGIC ---
-      // --- PHASE 3: COLLECTION LOGIC ---
       function updateChecklist() {
-        // Change text to [X] and color to Green when collected
         if (inventory.phone) {
             uiPhone.setAttribute('value', '[X] Phone Collected');
             uiPhone.setAttribute('color', '#00FF00');
@@ -173,12 +228,10 @@
             uiFirstaid.setAttribute('color', '#00FF00');
         }
 
-        // WIN CONDITION MET
         if (inventory.phone && inventory.torch && inventory.firstaid) {
           checklistUI.setAttribute('visible', 'false');
           successMessage.setAttribute('visible', 'true');
           
-          // Show the door to the basement
           basementDoor.setAttribute('visible', 'true');
           basementDoor.classList.add('clickable');
           
@@ -210,123 +263,92 @@
       });
 
       // --- PHASE 4: LEVEL TRANSITION ---
-      const fadeScreen = document.querySelector('#fade-screen'); // Grab the black screen
+      const fadeScreen = document.querySelector('#fade-screen'); 
 
       basementDoor.addEventListener('click', () => {
         console.log("Initiating Level Transition Fade...");
         
-        // 1. Fade the screen to BLACK (Takes 1000ms / 1 second)
         fadeScreen.setAttribute('animation', 'property: material.opacity; from: 0; to: 1; dur: 1000; easing: linear');
         
-        // 2. Use setTimeout to wait exactly 1 second while the screen is black
         setTimeout(() => {
-            // -- Do all the teleporting while the player can't see! --
-            
-            // Hide Bedroom, Show Basement
             bedroomScene.setAttribute('visible', 'false');
             basementScene.setAttribute('visible', 'true');
             
-            // Teleport the player
             rig.setAttribute('position', '-17.957 8.060 34.629');
             rig.setAttribute('rotation', '0 0 0'); 
 
             inBasement = true;
             
-            // Make the switch clickable & update HUD
             powerSwitch.classList.add('clickable');
             basementObjective.setAttribute('visible', 'true');
             
-            // 3. Fade the screen back to CLEAR (Takes 1 second)
             fadeScreen.setAttribute('animation', 'property: material.opacity; from: 1; to: 0; dur: 1000; easing: linear');
             
-        }, 1000); // Wait 1000ms before running this block
+        }, 1000); 
       });
 
       // --- PHASE 5: THE SWITCH LOGIC ---
       powerSwitch.addEventListener('click', () => {
         console.log("Power disconnected! Playing animation...");
         
-        // 1. Play the animation baked inside the .glb file
-        // clip: * (Plays all animations)
-        // loop: once (Prevents it from pulling up and down forever)
-        // clampWhenFinished: true (Leaves the lever stuck in the 'down' position when done)
         powerSwitch.setAttribute('animation-mixer', 'clip: *; loop: once; clampWhenFinished: true');
-        
-        // 2. Stop the user from clicking it again
         powerSwitch.classList.remove('clickable');
         
-        // 3. Update objective text
         basementObjective.setAttribute('value', 'POWER DISCONNECTED.\nSafe from electrocution.');
         basementObjective.setAttribute('color', '#00FF00');
       });
+
       // ==========================================
-      // --- PHASE 6: FOOTSTEP AUDIO LOGIC ---
+      // --- PHASE 6 & 7: MASTER GAME LOOP (CONTROLLER, WALLS, AUDIO) ---
       // ==========================================
       const footstepsAudio = document.querySelector('#footsteps-audio');
       
-      // We use a Set to track multiple keys at once (e.g., holding W and D to move diagonally)
-      const activeKeys = new Set();
-      const movementKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+      let inBasement = false; 
 
-      document.addEventListener('keydown', (event) => {
-        const key = event.key.toLowerCase();
-        
-        // If the key pressed is a movement key...
-        if (movementKeys.includes(key)) {
-            activeKeys.add(key);
-            
-            // If this is the FIRST key pressed (starting to move), play the sound
-            if (activeKeys.size === 1) {
-                // Lower the volume slightly so it doesn't drown out the news video
-                footstepsAudio.volume = 0.5; 
-                footstepsAudio.play().catch(err => console.log("Click the screen first to allow audio!", err));
-            }
-        }
-      });
-
-      document.addEventListener('keyup', (event) => {
-        const key = event.key.toLowerCase();
-        
-        // When a key is released, remove it from the active list
-        if (movementKeys.includes(key)) {
-            activeKeys.delete(key);
-            
-            // If NO movement keys are being held down, pause the sound
-            if (activeKeys.size === 0) {
-                footstepsAudio.pause();
-                // Optional: reset audio to the beginning of the step sound
-                // footstepsAudio.currentTime = 0; 
-            }
-        }
-      });
-      // ==========================================
-      // --- PHASE 7: INVISIBLE WALLS (COLLISION) ---
-      // ==========================================
-      let inBasement = false; // Tracks which room we are currently in
-
-      // NOTE: I have guessed these numbers based on your item locations. 
-      // You will need to tweak them to perfectly match your actual walls!
       const bounds = {
           bedroom:  { minX: -8.6  , maxX: 15.5, minZ: -21.6, maxZ: 20.780 },
           basement: { minX: -20.431, maxX: -1.028, minZ: 33.224, maxZ: 67.3 }
       };
 
-      function enforceWalls() {
-          // Get the actual 3D position of the player
+      // Store the initial position to track movement deltas
+      let lastX = 10; 
+      let lastZ = -17; 
+
+      function gameLoop() {
           let pos = rig.object3D.position; 
           let currentRoom = inBasement ? bounds.basement : bounds.bedroom;
 
-          // If the player tries to walk past a wall, freeze them at the wall's coordinate
+          // 1. INVISIBLE WALLS (Collision Enforcement)
           if (pos.x < currentRoom.minX) pos.x = currentRoom.minX;
           if (pos.x > currentRoom.maxX) pos.x = currentRoom.maxX;
           if (pos.z < currentRoom.minZ) pos.z = currentRoom.minZ;
           if (pos.z > currentRoom.maxZ) pos.z = currentRoom.maxZ;
 
-          // Run this check every single frame of the game (60 times a second)
-          requestAnimationFrame(enforceWalls); 
+          // 2. UNIVERSAL FOOTSTEPS (Triggers on any positional change, keyboard or gamepad)
+          let movedX = Math.abs(pos.x - lastX);
+          let movedZ = Math.abs(pos.z - lastZ);
+
+          if (movedX > 0.005 || movedZ > 0.005) {
+              if (footstepsAudio.paused) {
+                  footstepsAudio.volume = 0.5;
+                  let playPromise = footstepsAudio.play();
+                  if (playPromise !== undefined) {
+                      playPromise.catch(error => { console.log("Waiting for user interaction..."); });
+                  }
+              }
+          } else {
+              if (!footstepsAudio.paused) { footstepsAudio.pause(); }
+          }
+
+          // Save current coordinates for the next frame
+          lastX = pos.x;
+          lastZ = pos.z;
+
+          // Loop engine 60 FPS
+          requestAnimationFrame(gameLoop); 
       }
       
-      enforceWalls(); // Start the collision engine!
+      gameLoop(); // Initialize the engine
     </script>
   </body>
 </html>
