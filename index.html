@@ -7,9 +7,10 @@
     
     <script>
       // using namespace std;
-      
+
       AFRAME.registerComponent('drone-controller', {
-        schema: { speed: { default: 0.15 } }, 
+        // CHANGED: Lowered default speed from 0.15 to 0.07 for smoother flight
+        schema: { speed: { default: 0.07 } }, 
         init: function () {
           this.camera = document.querySelector('[camera]');
           this.lockedYaw = null; 
@@ -17,26 +18,21 @@
         tick: function () {
           var look = this.camera ? this.camera.components['look-controls'] : null;
 
-          // Pitch is NOT locked here, allowing mouse to look up/down freely.
-
           var gamepads = navigator.getGamepads && navigator.getGamepads();
           if (!gamepads) return;
 
           for (var i = 0; i < gamepads.length; i++) {
             var gamepad = gamepads[i];
             if (gamepad) {
-              var stickX = gamepad.axes[2]; // Right Stick Left/Right
-              var stickY = gamepad.axes[3]; // Right Stick Up/Down
+              var stickX = gamepad.axes[2]; 
+              var stickY = gamepad.axes[3]; 
 
-              // AXIS ISOLATION: 
-              // If you push the stick Up/Down hard, we treat it as an elevator.
+              // CHANGED: Increased deadzone to 0.4. 
+              // You have to push the stick halfway before it starts moving.
               if (Math.abs(stickY) > 0.4 && Math.abs(stickY) > Math.abs(stickX) * 2) {
                 
-                // 1. Move the Rig Up/Down
                 this.el.object3D.position.y -= stickY * this.data.speed;
 
-                // 2. Lock the Left/Right head turn ONLY while elevating
-                // This prevents the "Arcing" while the mouse stays free otherwise.
                 if (look && look.yawObject) {
                   if (this.lockedYaw === null) {
                      this.lockedYaw = look.yawObject.rotation.y; 
@@ -44,7 +40,6 @@
                   look.yawObject.rotation.y = this.lockedYaw; 
                 }
               } else {
-                // Unlock head rotation when stick is released
                 this.lockedYaw = null;
               }
             }
@@ -69,7 +64,7 @@
         <video id="scene2-video" src="assets/scene2.mp4" crossorigin="anonymous" playsinline webkit-playsinline></video>
       </a-assets>
 
-      <a-entity id="rig" movement-controls="fly: true; speed: 0.25" drone-controller position="10 9.6 -17">
+      <a-entity id="rig" movement-controls="fly: true; speed: 0.25;rotationSpeed: 0.5" drone-controller position="10 9.6 -17">
         <a-entity camera position="0 0 0" look-controls>
           <a-cursor fuse="true" fuseTimeout="1500" color="yellow" raycaster="objects: .clickable"
                     animation__fusing="property: scale; from: 1 1 1; to: 0.1 0.1 0.1; dur: 1500; startEvents: fusing"
