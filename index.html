@@ -273,9 +273,11 @@
           introVideo.play().then(() => { introVideo.pause(); introVideo.currentTime = 0; }).catch(e => {});
           window.removeEventListener('click', unlockVideo);
           window.removeEventListener('keydown', unlockVideo);
+          window.removeEventListener('touchstart', unlockVideo);
       };
       window.addEventListener('click', unlockVideo);
       window.addEventListener('keydown', unlockVideo);
+      window.addEventListener('touchstart', unlockVideo);
 
       // --- PHASE 0: 3D GAZE INTRO SEQUENCE ---
       startBtn3D.addEventListener('click', () => {
