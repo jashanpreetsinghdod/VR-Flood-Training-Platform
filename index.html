@@ -9,7 +9,6 @@
       // using namespace std;
 
       AFRAME.registerComponent('drone-controller', {
-        // CHANGED: Lowered default speed from 0.15 to 0.07 for smoother flight
         schema: { speed: { default: 0.07 } }, 
         init: function () {
           this.camera = document.querySelector('[camera]');
@@ -27,10 +26,7 @@
               var stickX = gamepad.axes[2]; 
               var stickY = gamepad.axes[3]; 
 
-              // CHANGED: Increased deadzone to 0.4. 
-              // You have to push the stick halfway before it starts moving.
               if (Math.abs(stickY) > 0.4 && Math.abs(stickY) > Math.abs(stickX) * 2) {
-                
                 this.el.object3D.position.y -= stickY * this.data.speed;
 
                 if (look && look.yawObject) {
@@ -48,7 +44,8 @@
       });
     </script>
   </head>
-  <body style="background-color: black;">
+  <body style="background-color: black; margin: 0; overflow: hidden;">
+    
     <a-scene>
       
       <a-assets>
@@ -61,68 +58,115 @@
         <a-asset-item id="switch-asset" src="assets/switch.glb"></a-asset-item>
 
         <audio id="footsteps-audio" src="assets/footsteps.mp3" loop crossorigin="anonymous"></audio>
-        <video id="scene2-video" src="assets/scene2.mp4" crossorigin="anonymous" playsinline webkit-playsinline></video>
+        <audio id="zap-audio" src="assets/zap.mp3" preload="auto"></audio>
+        
+        <video id="scene2-video" src="assets/scene4.mp4" crossorigin="anonymous" playsinline webkit-playsinline preload="auto"></video>
+        <video id="intro-video" src="assets/entryscene.mp4" crossorigin="anonymous" playsinline webkit-playsinline preload="auto"></video>
       </a-assets>
 
-      <a-entity id="rig" movement-controls="fly: true; speed: 0.25;rotationSpeed: 0.5" drone-controller position="10 9.6 -17">
+      <a-entity id="global-lights">
+        <a-light id="ambient-light" type="ambient" color="#ffffff" intensity="0.7"></a-light>
+        <a-light id="directional-light" type="directional" color="#ffffff" intensity="0.5" position="-1 1 1"></a-light>
+      </a-entity>
+
+      <a-entity id="turn-around-text" position="10 9.6 -22">
+        <a-text value="LOOK BEHIND YOU" align="center" color="#ffffff" scale="1.5 1.5 1.5" font="mozillavr"></a-text>
+      </a-entity>
+
+      <a-entity id="intro-container" position="10 9.6 -12" rotation="0 180 0">
+        <a-box id="start-btn-3d" class="clickable" width="3.5" height="1" depth="0.1" color="#aa0000" position="0 0 0">
+          <a-text value="START EXPERIENCE\n(Stare to Begin)" align="center" position="0 0 0.06" scale="0.8 0.8 0.8" color="white" font="mozillavr"></a-text>
+        </a-box>
+        <a-video id="intro-video-screen" src="#intro-video" width="8" height="4.5" position="0 0 0" visible="false"></a-video>
+      </a-entity>
+
+      <a-entity id="rig" movement-controls="fly: true; speed: 0.25; rotationSpeed: 0.5" drone-controller position="10 9.6 -17">
         <a-entity camera position="0 0 0" look-controls>
           <a-cursor fuse="true" fuseTimeout="1500" color="yellow" raycaster="objects: .clickable"
                     animation__fusing="property: scale; from: 1 1 1; to: 0.1 0.1 0.1; dur: 1500; startEvents: fusing"
                     animation__mouseleave="property: scale; to: 1 1 1; dur: 100; startEvents: mouseleave">
           </a-cursor>
+
+          <a-light id="player-flashlight" type="spot" color="#e6f2ff" intensity="0" distance="30" angle="45" penumbra="0.8" position="0 0 0" rotation="0 0 0"></a-light>
+
+          <a-plane id="flash-screen" color="#ffffff" width="10" height="10" position="0 0 -0.08" material="opacity: 0; transparent: true; depthTest: false" visible="false"></a-plane>
+
           <a-plane id="fade-screen" color="#000000" width="10" height="10" position="0 0 -0.1" material="opacity: 0; transparent: true; depthTest: false"></a-plane>
-          <a-entity id="emergency-alert" position="0 0 -1" scale="0.4 0.4 0.4" visible="false">
-            <a-plane width="3.5" height="1.2" color="#4a0000" opacity="0.85" position="0 0 -0.01"></a-plane>
-            <a-text value="WARNING: FLASH FLOOD" color="#FF3333" align="center" position="0 0.2 0" width="4" font="mozillavr"></a-text>
-            <a-text value="Collect necessary survival items!" color="#FFFFFF" align="center" position="0 -0.15 0" width="3"></a-text>
+          
+          <a-plane id="underwater-overlay" color="#0055ff" width="10" height="10" position="0 0 -0.05" material="opacity: 0; transparent: true; depthTest: false" visible="false"></a-plane>
+
+          <a-entity id="emergency-alert" position="0 0 -1" scale="0.35 0.35 0.35" visible="false">
+            <a-plane width="4.5" height="1.5" color="#110000" opacity="0.8" position="0 0 -0.01"></a-plane>
+            <a-text value="ALERT: FLASH FLOOD" color="#ff2a2a" align="center" position="0 0.3 0" width="5" font="exo2bold"></a-text>
+            <a-text value="GATHER SURVIVAL GEAR IMMEDIATELY" color="#dddddd" align="center" position="0 -0.2 0" width="3.5" font="exo2bold"></a-text>
           </a-entity>
 
-
-          <a-entity id="checklist-ui" position="0.8 0.5 -1" scale="0.4 0.4 0.4" visible="false">
-            <a-plane width="2.2" height="1.8" color="#1a1a1a" opacity="0.85" position="0 0 -0.01"></a-plane>
-            
-            <a-text value="EMERGENCY TASKS" color="#FFCC00" align="center" position="0 0.65 0" width="3.5" font="mozillavr"></a-text>
-            <a-plane width="1.8" height="0.02" color="#FFCC00" position="0 0.45 0" opacity="0.8"></a-plane>
-            
-            <a-text id="ui-phone" value="[ ] Find Phone" position="-0.8 0.15 0" width="3" color="#CCCCCC"></a-text>
-            <a-text id="ui-torch" value="[ ] Find Torch" position="-0.8 -0.15 0" width="3" color="#CCCCCC"></a-text>
-            <a-text id="ui-firstaid" value="[ ] First Aid Kit" position="-0.8 -0.45 0" width="3" color="#CCCCCC"></a-text>
+          <a-entity id="flood-warning" position="0 0 -0.8" scale="0.35 0.35 0.35" visible="false">
+            <a-plane width="7" height="2.2" color="#110000" opacity="0.85" position="0 0 -0.01"></a-plane>
+            <a-text value="SYSTEM OVERRIDE" color="#ff2a2a" align="center" position="0 0.6 0" width="6" font="exo2bold"></a-text>
+            <a-text value="CRITICAL: FLOOD DETECTED!" color="#ff0000" align="center" position="0 0.1 0" width="7" font="exo2bold"></a-text>
+            <a-text value="WATER RISING IN 15s | TOTAL EVAC TIME: 35s" color="#ffffff" align="center" position="0 -0.5 0" width="4" font="exo2bold"></a-text>
           </a-entity>
 
+          <a-entity id="checklist-ui" position="0.8 0.5 -1" scale="0.35 0.35 0.35" visible="false">
+            <a-plane width="2.6" height="2" color="#001122" opacity="0.75" position="0 0 -0.01"></a-plane>
+            <a-text value="EVAC PROTOCOL" color="#00e5ff" align="center" position="0 0.7 0" width="4" font="exo2bold"></a-text>
+            <a-plane width="2.2" height="0.01" color="#00e5ff" position="0 0.5 0" opacity="0.5"></a-plane>
+            <a-text id="ui-phone" value="[ ] LOCATE PHONE" position="-1.1 0.2 0" width="3.2" color="#777777" font="exo2bold"></a-text>
+            <a-text id="ui-torch" value="[ ] LOCATE TORCH" position="-1.1 -0.1 0" width="3.2" color="#777777" font="exo2bold"></a-text>
+            <a-text id="ui-firstaid" value="[ ] FIRST AID KIT" position="-1.1 -0.4 0" width="3.2" color="#777777" font="exo2bold"></a-text>
+          </a-entity>
 
-          <a-entity id="success-message" position="0 0 -1" scale="0.4 0.4 0.4" visible="false">
-            <a-plane width="4" height="1.2" color="#003300" opacity="0.85" position="0 0 -0.01"></a-plane>
-            <a-text value="ALL ITEMS COLLECTED!" color="#00FF00" align="center" position="0 0.2 0" width="4" font="mozillavr"></a-text>
-            <a-text value="Find the basement door immediately." color="#FFFFFF" align="center" position="0 -0.15 0" width="3"></a-text>
+          <a-entity id="success-message" position="0 0 -1" scale="0.35 0.35 0.35" visible="false">
+            <a-plane width="5" height="1.2" color="#002200" opacity="0.85" position="0 0 -0.01"></a-plane>
+            <a-text value="GEAR ACQUIRED!" color="#39ff14" align="center" position="0 0.2 0" width="5" font="exo2bold"></a-text>
+            <a-text value="PROCEED TO BASEMENT IMMEDIATELY" color="#ffffff" align="center" position="0 -0.2 0" width="3" font="exo2bold"></a-text>
           </a-entity>
 
           <a-entity id="basement-objective" position="0 -0.5 -1" scale="0.35 0.35 0.35" visible="false">
-            <a-plane width="3.8" height="1.2" color="#1a1a1a" opacity="0.85" position="0 0 -0.01"></a-plane>
-            <a-text id="objective-title" value="NEW OBJECTIVE" color="#FFCC00" align="center" position="0 0.2 0" width="4" font="mozillavr"></a-text>
-            <a-text id="objective-text" value="Find the Main Switch and cut the power!" color="#FFFFFF" align="center" position="0 -0.15 0" width="3"></a-text>
+            <a-plane width="4" height="1.2" color="#001122" opacity="0.75" position="0 0 -0.01"></a-plane>
+            <a-text id="objective-title" value="NEW DIRECTIVE" color="#00e5ff" align="center" position="0 0.2 0" width="4" font="exo2bold"></a-text>
+            <a-text id="objective-text" value="FIND MAIN SWITCH & CUT POWER!" color="#ffffff" align="center" position="0 -0.2 0" width="4" font="exo2bold"></a-text>
           </a-entity>
+
+          <a-entity id="timer-ui" position="0 0.6 -1" scale="0.4 0.4 0.4" visible="false">
+            <a-plane width="3" height="0.8" color="#110000" opacity="0.8" position="0 0 -0.01"></a-plane>
+            <a-text id="timer-text" value="T-MINUS: 35s" color="#ff2a2a" align="center" position="0 0 0" width="5" font="exo2bold"></a-text>
+          </a-entity>
+
+          <a-entity id="game-over-screen" position="0 0 -0.8" scale="0.5 0.5 0.5" visible="false">
+            <a-plane width="10" height="10" color="#110000" opacity="0.95" position="0 0 -0.01"></a-plane>
+            <a-text value="SYSTEM FAILURE" color="#ff0000" align="center" position="0 0.4 0" width="6" font="exo2bold"></a-text>
+            <a-text value="SUBJECT DROWNED" color="#ff2a2a" align="center" position="0 0 0" width="8" font="exo2bold"></a-text>
+            <a-text value="REBOOTING SIMULATION..." color="#777777" align="center" position="0 -0.4 0" width="3" font="exo2bold"></a-text>
+          </a-entity>
+
+          <a-entity id="electrocution-screen" position="0 0 -0.8" scale="0.5 0.5 0.5" visible="false">
+            <a-plane width="10" height="10" color="#110000" opacity="0.95" position="0 0 -0.01"></a-plane>
+            <a-text value="FATAL ERROR" color="#ff0000" align="center" position="0 0.4 0" width="7" font="exo2bold"></a-text>
+            <a-text value="ELECTROCUTION DETECTED" color="#ff2a2a" align="center" position="0 0 0" width="8" font="exo2bold"></a-text>
+            <a-text value="NEVER TOUCH WET LIVE SWITCHBOARDS BAREHANDED" color="#ffffff" align="center" position="0 -0.4 0" width="5" font="exo2bold"></a-text>
+            <a-text value="REBOOTING SIMULATION..." color="#777777" align="center" position="0 -0.8 0" width="3" font="exo2bold"></a-text>
+          </a-entity>
+
+          <a-entity id="win-screen" position="0 0 -0.8" scale="0.5 0.5 0.5" visible="false">
+            <a-plane width="10" height="10" color="#001100" opacity="0.95" position="0 0 -0.01"></a-plane>
+            <a-text value="EVACUATION SUCCESSFUL" color="#39ff14" align="center" position="0 0.3 0" width="7" font="exo2bold"></a-text>
+            <a-text value="SUBJECT SURVIVED" color="#ffffff" align="center" position="0 -0.2 0" width="4" font="exo2bold"></a-text>
+          </a-entity>
+
         </a-entity>
       </a-entity>
 
-      <a-entity id="bedroom-scene" visible="true">
+      <a-entity id="bedroom-scene" visible="false">
         <a-gltf-model src="#house-model" class="floor" position="0 0 0"></a-gltf-model>
         <a-plane rotation="-90 0 0" width="100" height="100" color="#333" opacity="0.5"></a-plane>
 
-        <a-box id="tv-trigger" class="clickable" 
-       position="14.687 9.235 -1.813" 
-       rotation="-11.596 -78.103 -1.114" 
-       scale="4.709 2.706 0.043" 
-       color="#FF0033" opacity="0.6">
-    <a-text value="WATCH NEWS" align="center" position="0 0 0.1" scale="1 1 1" color="white"></a-text>
-</a-box>
+        <a-box id="tv-trigger" class="clickable" position="14.687 9.235 -1.813" rotation="-11.596 -78.103 -1.114" scale="4.709 2.706 0.043" color="#FF0033" opacity="0.6">
+          <a-text value="WATCH NEWS" align="center" position="0 0 0.1" scale="1 1 1" color="white" font="exo2bold"></a-text>
+        </a-box>
 
-<a-video id="tv-screen" src="#scene2-video" 
-         position="14.687 9.235 -1.813" 
-         rotation="-6.139 -81.591 -0.284" 
-         width="6" height="3" 
-         scale="0.831 0.939 0.176" 
-         visible="false">
-</a-video>
+        <a-video id="tv-screen" src="#scene2-video" position="14.687 9.235 -1.813" rotation="-6.139 -81.591 -0.284" width="6" height="3" scale="0.831 0.939 0.176" visible="false"></a-video>
 
         <a-entity id="item-spawner" visible="true">
           <a-gltf-model id="item-phone" src="#phone-asset" position="13.458 6.768 -7.852" rotation="-90 0 -90" scale="0.28 0.28 0.28"></a-gltf-model>
@@ -131,7 +175,7 @@
         </a-entity>
 
         <a-box id="basement-door" position="3.379 9.947 21.976" rotation="0 -180 0" scale="7.833 5.576 4.793" width="1.5" height="3" depth="0.1" color="#8B4513" opacity="0.2" visible="false">
-          <a-text value="STARE TO ENTER\nBASEMENT" align="center" position="0 0 0.1" color="white"></a-text>
+          <a-text value="STARE TO ENTER\nBASEMENT" align="center" position="0 0 0.1" color="white" font="exo2bold"></a-text>
         </a-box>
       </a-entity>
 
@@ -139,69 +183,141 @@
         <a-gltf-model src="#basement-model" class="floor" position="-10.6 -4.1 47"></a-gltf-model>
         
         <a-gltf-model id="power-switch" src="#switch-asset" class="clickable" position="-0.726 1.816 52.977" rotation="0 -90 0" scale="0.005 0.005 0.005">
-          <a-text value="MAIN POWER\nSTARE TO PULL" align="center" position="0 0.5 0" color="white" scale="0.5 0.5 0.5"></a-text>
+          <a-text value="MAIN POWER\nSTARE TO PULL" align="center" position="0 0.5 0" color="white" scale="0.5 0.5 0.5" font="exo2bold"></a-text>
         </a-gltf-model>
+
+        <a-cylinder id="item-stick" radius="0.03" height="1.5" color="#5c4033" position="-3.542 -1.812 46.078" rotation="-31.938 -110.21 20.631" scale="2.049 3.574 1.325" visible="false"></a-cylinder>
+
+        <a-plane id="flood-water" color="#0055ff" opacity="0.80" width="150" height="150" rotation="-90 0 0" position="-10.6 -4.1 47" visible="false"></a-plane>
+
+        <a-box id="roof-door" position="-17.912 8.461 34.355" rotation="0 0.190 0" scale="2 4.025 0.1" color="#444" opacity="0.3" visible="false">
+          <a-text value="ROOF ESCAPE\nSTARE TO OPEN" align="center" position="0 0 0.1" color="white" scale="0.8 0.8 0.8" font="exo2bold"></a-text>
+        </a-box>
+
       </a-entity>
 
     </a-scene>
 
     <script>
       // using namespace std;
-      
+
       const tvTrigger = document.querySelector('#tv-trigger');
       const tvScreen = document.querySelector('#tv-screen');
       const scene2Video = document.querySelector('#scene2-video');
       const emergencyAlert = document.querySelector('#emergency-alert');
-      
       const itemSpawner = document.querySelector('#item-spawner');
       const checklistUI = document.querySelector('#checklist-ui');
       const successMessage = document.querySelector('#success-message');
-
       const phone = document.querySelector('#item-phone');
       const torch = document.querySelector('#item-torch');
       const firstaid = document.querySelector('#item-firstaid');
-
       const uiPhone = document.querySelector('#ui-phone');
       const uiTorch = document.querySelector('#ui-torch');
       const uiFirstaid = document.querySelector('#ui-firstaid');
-
       const bedroomScene = document.querySelector('#bedroom-scene');
       const basementDoor = document.querySelector('#basement-door');
       const basementScene = document.querySelector('#basement-scene');
       const rig = document.querySelector('#rig');
+      
       const powerSwitch = document.querySelector('#power-switch');
+      const itemStick = document.querySelector('#item-stick'); // NEW STICK
+      
       const basementObjective = document.querySelector('#basement-objective');
 
-      let inventory = { phone: false, torch: false, firstaid: false };
+      const ambientLight = document.querySelector('#ambient-light');
+      const dirLight = document.querySelector('#directional-light');
+      const playerFlashlight = document.querySelector('#player-flashlight');
 
-      // --- PHASE 1: THE VIDEO (Upgraded for Controller Trust) ---
+      const floodWater = document.querySelector('#flood-water');
+      const roofDoor = document.querySelector('#roof-door');
+      const timerUI = document.querySelector('#timer-ui');
+      const timerText = document.querySelector('#timer-text');
+      const gameOverScreen = document.querySelector('#game-over-screen');
+      const winScreen = document.querySelector('#win-screen');
+      
+      const floodWarning = document.querySelector('#flood-warning');
+
+      // ELECTROCUTION ELEMENTS
+      const flashScreen = document.querySelector('#flash-screen');
+      const electrocutionScreen = document.querySelector('#electrocution-screen');
+      const zapAudio = document.querySelector('#zap-audio');
+
+      const underwaterOverlay = document.querySelector('#underwater-overlay');
+      const cameraEl = document.querySelector('[camera]');
+      let cameraWorldPos = new THREE.Vector3();
+
+      const introVideo = document.querySelector('#intro-video');
+      const introContainer = document.querySelector('#intro-container');
+      const startBtn3D = document.querySelector('#start-btn-3d');
+      const introVideoScreen = document.querySelector('#intro-video-screen');
+      const turnAroundText = document.querySelector('#turn-around-text');
+
+      // CHANGED: Added stick tracking to inventory
+      let inventory = { phone: false, torch: false, firstaid: false, stick: false };
+
+      let blackoutActive = false; 
+      let isFlashlightOn = false;
+      let lastButtonState = false; 
+
+      let timeRemaining = 35;
+      let floodInterval;
+      let isGameOver = false;
+
+      // -----------------------------------------------------------------
+      // Unlocks browser audio safely
+      // -----------------------------------------------------------------
+      const unlockVideo = () => {
+          scene2Video.load();
+          introVideo.load();
+          scene2Video.play().then(() => { scene2Video.pause(); scene2Video.currentTime = 0; }).catch(e => {});
+          introVideo.play().then(() => { introVideo.pause(); introVideo.currentTime = 0; }).catch(e => {});
+          window.removeEventListener('click', unlockVideo);
+          window.removeEventListener('keydown', unlockVideo);
+      };
+      window.addEventListener('click', unlockVideo);
+      window.addEventListener('keydown', unlockVideo);
+
+      // --- PHASE 0: 3D GAZE INTRO SEQUENCE ---
+      startBtn3D.addEventListener('click', () => {
+          startBtn3D.querySelector('a-text').setAttribute('value', 'LOADING...');
+          startBtn3D.classList.remove('clickable');
+          
+          introVideo.play().catch(e => console.error("Intro video play failed:", e));
+
+          introVideo.addEventListener('timeupdate', () => {
+              startBtn3D.setAttribute('visible', 'false'); 
+              introVideoScreen.setAttribute('visible', 'true'); 
+          }, { once: true });
+      });
+
+      introVideo.addEventListener('ended', () => {
+          introContainer.setAttribute('visible', 'false'); 
+          turnAroundText.setAttribute('visible', 'false'); 
+          bedroomScene.setAttribute('visible', 'true');    
+      });
+
+      // --- PHASE 1: THE TV VIDEO ---
       tvTrigger.addEventListener('click', () => {
-        console.log("Gaze detected! Attempting to play video...");
-        
-        tvTrigger.setAttribute('visible', 'false');
+        tvTrigger.querySelector('a-text').setAttribute('value', 'LOADING...');
         tvTrigger.classList.remove('clickable'); 
-        tvScreen.setAttribute('visible', 'true');
+        
+        scene2Video.muted = false; 
+        scene2Video.play().catch(err => console.error("Video blocked by browser", err));
 
-        // FORCE PLAY: We mute it for a millisecond to satisfy the browser, then play
-        scene2Video.muted = true; 
-        scene2Video.play().then(() => {
-            // Once it starts, we unmute it so you can hear the news!
-            scene2Video.muted = false;
-        }).catch(err => {
-            console.error("Video blocked by browser. Physical click needed!", err);
-        });
+        scene2Video.addEventListener('timeupdate', () => {
+            tvTrigger.setAttribute('visible', 'false'); 
+            tvScreen.setAttribute('visible', 'true');
+        }, { once: true });
       });
 
       // --- PHASE 2: THE ALERT & SPAWN ---
       scene2Video.addEventListener('ended', () => {
         tvScreen.setAttribute('visible', 'false');
         emergencyAlert.setAttribute('visible', 'true');
-        
         setTimeout(() => {
             emergencyAlert.setAttribute('visible', 'false');
             checklistUI.setAttribute('visible', 'true');
             itemSpawner.setAttribute('visible', 'true');
-            
             phone.classList.add('clickable');
             torch.classList.add('clickable');
             firstaid.classList.add('clickable');
@@ -210,102 +326,171 @@
 
       // --- PHASE 3: COLLECTION LOGIC ---
       function updateChecklist() {
-        if (inventory.phone) {
-            uiPhone.setAttribute('value', '[X] Phone Collected');
-            uiPhone.setAttribute('color', '#00FF00');
-        }
-        if (inventory.torch) {
-            uiTorch.setAttribute('value', '[X] Torch Collected');
-            uiTorch.setAttribute('color', '#00FF00');
-        }
-        if (inventory.firstaid) {
-            uiFirstaid.setAttribute('value', '[X] First Aid Kit');
-            uiFirstaid.setAttribute('color', '#00FF00');
-        }
+        if (inventory.phone) { uiPhone.setAttribute('value', '[ACQUIRED] PHONE'); uiPhone.setAttribute('color', '#39ff14'); }
+        if (inventory.torch) { uiTorch.setAttribute('value', '[ACQUIRED] TORCH'); uiTorch.setAttribute('color', '#39ff14'); }
+        if (inventory.firstaid) { uiFirstaid.setAttribute('value', '[ACQUIRED] FIRST AID'); uiFirstaid.setAttribute('color', '#39ff14'); }
 
         if (inventory.phone && inventory.torch && inventory.firstaid) {
           checklistUI.setAttribute('visible', 'false');
           successMessage.setAttribute('visible', 'true');
-          
           basementDoor.setAttribute('visible', 'true');
           basementDoor.classList.add('clickable');
-          
-          setTimeout(() => {
-              successMessage.setAttribute('visible', 'false');
-          }, 4000);
+          setTimeout(() => { successMessage.setAttribute('visible', 'false'); }, 4000);
         }
       }
 
-      phone.addEventListener('click', () => {
-        inventory.phone = true;
-        phone.setAttribute('visible', 'false');
-        phone.classList.remove('clickable');
-        updateChecklist();
-      });
-
-      torch.addEventListener('click', () => {
-        inventory.torch = true;
-        torch.setAttribute('visible', 'false');
-        torch.classList.remove('clickable');
-        updateChecklist();
-      });
-
-      firstaid.addEventListener('click', () => {
-        inventory.firstaid = true;
-        firstaid.setAttribute('visible', 'false');
-        firstaid.classList.remove('clickable');
-        updateChecklist();
-      });
+      phone.addEventListener('click', () => { inventory.phone = true; phone.setAttribute('visible', 'false'); phone.classList.remove('clickable'); updateChecklist(); });
+      torch.addEventListener('click', () => { inventory.torch = true; torch.setAttribute('visible', 'false'); torch.classList.remove('clickable'); updateChecklist(); });
+      firstaid.addEventListener('click', () => { inventory.firstaid = true; firstaid.setAttribute('visible', 'false'); firstaid.classList.remove('clickable'); updateChecklist(); });
 
       // --- PHASE 4: LEVEL TRANSITION ---
       const fadeScreen = document.querySelector('#fade-screen'); 
-
       basementDoor.addEventListener('click', () => {
-        console.log("Initiating Level Transition Fade...");
-        
         fadeScreen.setAttribute('animation', 'property: material.opacity; from: 0; to: 1; dur: 1000; easing: linear');
-        
         setTimeout(() => {
             bedroomScene.setAttribute('visible', 'false');
             basementScene.setAttribute('visible', 'true');
-            
             rig.setAttribute('position', '-17.957 8.060 34.629');
             rig.setAttribute('rotation', '0 0 0'); 
-
             inBasement = true;
             
+            // CHANGED: Enable Switch and Stick, Update Objective
             powerSwitch.classList.add('clickable');
+            itemStick.setAttribute('visible', 'true');
+            itemStick.classList.add('clickable');
+            
+            basementObjective.querySelector('#objective-text').setAttribute('value', 'WARNING: HIGH VOLTAGE\nFIND WOODEN STICK TO CUT POWER!');
             basementObjective.setAttribute('visible', 'true');
             
             fadeScreen.setAttribute('animation', 'property: material.opacity; from: 1; to: 0; dur: 1000; easing: linear');
-            
         }, 1000); 
       });
 
-      // --- PHASE 5: THE SWITCH LOGIC ---
+      // --- NEW PHASE: PICK UP WOODEN STICK ---
+      itemStick.addEventListener('click', () => {
+          inventory.stick = true;
+          itemStick.setAttribute('visible', 'false');
+          itemStick.classList.remove('clickable');
+          
+          basementObjective.querySelector('#objective-text').setAttribute('value', '[ACQUIRED] WOODEN INSULATOR\nSAFELY CUT MAIN POWER!');
+          basementObjective.querySelector('#objective-text').setAttribute('color', '#39ff14');
+      });
+
+
+      // --- PHASE 5: THE SWITCH LOGIC & ELECTROCUTION TRAP ---
       powerSwitch.addEventListener('click', () => {
-        console.log("Power disconnected! Playing animation...");
         
+        // NEW: FATAL SHOCK CHECK
+        if (!inventory.stick) {
+            triggerElectrocution();
+            return; // Stops the rest of the code from running!
+        }
+
+        // IF SAFE (Has Stick): Continue normal flood sequence
         powerSwitch.setAttribute('animation-mixer', 'clip: *; loop: once; clampWhenFinished: true');
         powerSwitch.classList.remove('clickable');
         
-        basementObjective.setAttribute('value', 'POWER DISCONNECTED.\nSafe from electrocution.');
-        basementObjective.setAttribute('color', '#00FF00');
+        ambientLight.setAttribute('animation', 'property: light.intensity; to: 0.02; dur: 1500; easing: linear');
+        dirLight.setAttribute('animation', 'property: light.intensity; to: 0.0; dur: 1500; easing: linear');
+
+        basementObjective.setAttribute('visible', 'false');
+
+        setTimeout(() => {
+            blackoutActive = true; 
+            
+            floodWarning.setAttribute('visible', 'true');
+            
+            setTimeout(() => {
+                floodWarning.setAttribute('visible', 'false'); 
+                startFloodSequence();
+            }, 5000);
+
+        }, 1500);
+      });
+
+      // --- NEW: FATAL SHOCK SEQUENCE ---
+      function triggerElectrocution() {
+          if (isGameOver) return;
+          isGameOver = true;
+          
+          // Play loud zap sound if you added zap.mp3 to assets folder
+          zapAudio.volume = 1.0;
+          zapAudio.play().catch(e => console.log("Zap audio not found or blocked"));
+
+          // Instant white flashbang
+          flashScreen.setAttribute('visible', 'true');
+          flashScreen.setAttribute('material', 'opacity: 1');
+          
+          // Quickly fade flashbang out and reveal death screen
+          setTimeout(() => {
+              flashScreen.setAttribute('material', 'opacity: 0');
+              electrocutionScreen.setAttribute('visible', 'true'); 
+              
+              // Force reload after 3.5 seconds
+              setTimeout(() => { location.reload(); }, 3500);
+          }, 150);
+      }
+
+
+      // --- PHASE 6: THE FLOOD SEQUENCE ---
+      function startFloodSequence() {
+          if (isGameOver) return;
+          timerUI.setAttribute('visible', 'true');
+
+          floodWater.setAttribute('visible', 'true');
+          floodWater.setAttribute('animation', 'property: position; from: -10.6 -4.1 47; to: -10.6 10.0 47; dur: 35000; easing: linear');
+
+          roofDoor.setAttribute('visible', 'true');
+          roofDoor.classList.add('clickable');
+
+          floodInterval = setInterval(() => {
+              if (timeRemaining > 0) timeRemaining--;
+              timerText.setAttribute('value', `T-MINUS: ${timeRemaining}s`);
+              if (timeRemaining <= 0) { triggerDeath(); }
+          }, 1000);
+      }
+
+      function triggerDeath() {
+          if (isGameOver) return;
+          clearInterval(floodInterval);
+          isGameOver = true;
+          
+          floodWater.removeAttribute('animation'); 
+          roofDoor.classList.remove('clickable');
+
+          setTimeout(() => {
+              gameOverScreen.setAttribute('visible', 'true'); 
+              setTimeout(() => { location.reload(); }, 3000);
+          }, 1000);
+      }
+
+      // --- PHASE 7: ESCAPE LOGIC ---
+      roofDoor.addEventListener('click', () => {
+          if (isGameOver) return;
+          clearInterval(floodInterval);
+          isGameOver = true;
+          timerUI.setAttribute('visible', 'false');
+          roofDoor.classList.remove('clickable');
+          winScreen.setAttribute('visible', 'true');
+      });
+
+      window.addEventListener('keydown', (e) => {
+          if (e.key.toLowerCase() === 'k' && blackoutActive && !isGameOver) {
+              isFlashlightOn = !isFlashlightOn;
+              playerFlashlight.setAttribute('animation', `property: light.intensity; to: ${isFlashlightOn ? 1.5 : 0}; dur: 100`);
+          }
       });
 
       // ==========================================
-      // --- PHASE 6 & 7: MASTER GAME LOOP (CONTROLLER, WALLS, AUDIO) ---
+      // --- MASTER GAME LOOP ---
       // ==========================================
       const footstepsAudio = document.querySelector('#footsteps-audio');
-      
       let inBasement = false; 
-
       const bounds = {
           bedroom:  { minX: -8.6  , maxX: 15.5, minZ: -21.6, maxZ: 20.780 },
           basement: { minX: -20.431, maxX: -1.028, minZ: 33.224, maxZ: 67.3 }
       };
 
-      // Store the initial position to track movement deltas
       let lastX = 10; 
       let lastZ = -17; 
 
@@ -313,13 +498,11 @@
           let pos = rig.object3D.position; 
           let currentRoom = inBasement ? bounds.basement : bounds.bedroom;
 
-          // 1. INVISIBLE WALLS (Collision Enforcement)
           if (pos.x < currentRoom.minX) pos.x = currentRoom.minX;
           if (pos.x > currentRoom.maxX) pos.x = currentRoom.maxX;
           if (pos.z < currentRoom.minZ) pos.z = currentRoom.minZ;
           if (pos.z > currentRoom.maxZ) pos.z = currentRoom.maxZ;
 
-          // 2. UNIVERSAL FOOTSTEPS (Triggers on any positional change, keyboard or gamepad)
           let movedX = Math.abs(pos.x - lastX);
           let movedZ = Math.abs(pos.z - lastZ);
 
@@ -327,23 +510,47 @@
               if (footstepsAudio.paused) {
                   footstepsAudio.volume = 0.5;
                   let playPromise = footstepsAudio.play();
-                  if (playPromise !== undefined) {
-                      playPromise.catch(error => { console.log("Waiting for user interaction..."); });
-                  }
+                  if (playPromise !== undefined) { playPromise.catch(error => {}); }
               }
           } else {
               if (!footstepsAudio.paused) { footstepsAudio.pause(); }
           }
 
-          // Save current coordinates for the next frame
+          let gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+          for (let i = 0; i < gamepads.length; i++) {
+              let gp = gamepads[i];
+              if (gp) {
+                  let currentButtonState = gp.buttons[1] ? gp.buttons[1].pressed : false;
+                  
+                  if (currentButtonState && !lastButtonState && blackoutActive && !isGameOver) {
+                      isFlashlightOn = !isFlashlightOn; 
+                      playerFlashlight.setAttribute('animation', `property: light.intensity; to: ${isFlashlightOn ? 1.5 : 0}; dur: 100`);
+                  }
+                  lastButtonState = currentButtonState; 
+              }
+          }
+
+          if (inBasement && floodWater.getAttribute('visible') === true && !isGameOver) {
+              cameraEl.object3D.getWorldPosition(cameraWorldPos);
+              let eyeHeight = cameraWorldPos.y;
+              let waterHeight = floodWater.object3D.position.y;
+
+              if (waterHeight > eyeHeight - 0.1) {
+                  underwaterOverlay.setAttribute('visible', 'true');
+                  underwaterOverlay.setAttribute('material', 'opacity: 0.85');
+                  
+                  triggerDeath(); 
+              } else {
+                  underwaterOverlay.setAttribute('visible', 'false');
+              }
+          }
+
           lastX = pos.x;
           lastZ = pos.z;
-
-          // Loop engine 60 FPS
           requestAnimationFrame(gameLoop); 
       }
       
-      gameLoop(); // Initialize the engine
+      gameLoop(); 
     </script>
   </body>
 </html>
